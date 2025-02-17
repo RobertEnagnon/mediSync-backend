@@ -9,7 +9,7 @@ class Database {
   private uri: string;
 
   private constructor() {
-    this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/appointment_db';
+    this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/medisync';
   }
 
   public static getInstance(): Database {
