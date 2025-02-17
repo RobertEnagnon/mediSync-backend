@@ -7,7 +7,7 @@ import ClientService from '../services/ClientService';
 export class ClientController extends BaseController<IClient> {
   constructor() {
     super(ClientService);
-  }
+  } 
 
   search = async (req: Request, res: Response, next: NextFunction) => {
     try {
