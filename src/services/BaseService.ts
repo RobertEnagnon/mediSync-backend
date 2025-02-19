@@ -13,7 +13,7 @@ export abstract class BaseService<T extends Document> {
     return this.model.find();
   }
 
-  async getById(id: string): Promise<T> {
+  async getById(id: string): Promise<T | null> {
     const item = await this.model.findById(id);
     if (!item) {
       throw new ApiError(404, 'Item not found');
@@ -25,7 +25,7 @@ export abstract class BaseService<T extends Document> {
     return this.model.create(data);
   }
 
-  async update(id: string, data: Partial<T>): Promise<T> {
+  async update(id: string, data: Partial<T>): Promise<T | null> {
     const updatedItem = await this.model.findByIdAndUpdate(id, data, { new: true });
     if (!updatedItem) {
       throw new ApiError(404, 'Item not found');

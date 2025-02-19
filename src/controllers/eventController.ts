@@ -1,56 +1,55 @@
-import { Request, Response } from 'express';
-import Event from '../models/Event'; // Assurez-vous que le modèle Event est défini
+import { Request, Response, NextFunction } from 'express';
+import Event, {IEvent} from '../models/Event'; // Assurez-vous que le modèle Event est défini
+import {BaseController} from './BaseController'; // Importer la classe de base
+import EventService from '../services/EventService'; // Importer le service Event
 
-// Récupérer tous les événements
-export const getAllEvents = async (req: Request, res: Response) => {
-  try {
-    const events = await Event.find(); // Récupérer tous les événements
-    res.json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+class EventController extends BaseController<IEvent> {
+  constructor() {
+    super(EventService); // Appeler le constructeur de BaseController avec EventService
   }
-};
 
-// Récupérer un événement par ID
-export const getEventById = async (req: Request, res: Response) => {
-  try {
-    const event = await Event.findById(req.params.id); // Récupérer l'événement par ID
-    if (!event) return res.status(404).json({ message: 'Événement non trouvé' });
-    res.json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  // Récupérer tous les événements
+  public getAllEvents = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const events = await this.service.getAll(); // Utiliser le service pour récupérer tous les événements
+      res.json(events);
+    } catch (error) {
+      next(error); // Passer l'erreur au middleware de gestion des erreurs
+    }
   }
-};
 
-// Créer un nouvel événement
-export const createEvent = async (req: Request, res: Response) => {
-  const event = new Event(req.body); // Créer un nouvel événement à partir des données de la requête
-  try {
-    const savedEvent = await event.save(); // Sauvegarder l'événement
-    res.status(201).json(savedEvent);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  // Récupérer un événement par ID
+  public getEventById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const event = await this.service.getById(req.params.id); // Utiliser le service pour récupérer l'événement par ID
+      if (!event) return res.status(404).json({ message: 'Événement non trouvé' });
+      res.json(event);
+    } catch (error) {
+      next(error); // Passer l'erreur au middleware de gestion des erreurs
+    }
   }
-};
 
-// Mettre à jour un événement existant
-export const updateEvent = async (req: Request, res: Response) => {
-  try {
-    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true }); // Mettre à jour l'événement
-    if (!updatedEvent) return res.status(404).json({ message: 'Événement non trouvé' });
-    res.json(updatedEvent);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  // Créer un nouvel événement
+  public createEvent = async (req: Request, res: Response, next: NextFunction) => {
+    const event = new Event(req.body); // Créer un nouvel événement à partir des données de la requête
+    try {
+      const savedEvent = await event.save(); // Sauvegarder l'événement
+      res.status(201).json(savedEvent); // Retourner l'événement sauvegardé
+    } catch (error) {
+      next(error); // Passer l'erreur au middleware de gestion des erreurs
+    }
   }
-};
 
-// Supprimer un événement
-export const deleteEvent = async (req: Request, res: Response) => {
-  try {
-    const deletedEvent = await Event.findByIdAndDelete(req.params.id); // Supprimer l'événement
-    if (!deletedEvent) return res.status(404).json({ message: 'Événement non trouvé' });
-    res.json({ message: 'Événement supprimé' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  // Mettre à jour un événement existant
+  public updateEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const updatedEvent = await this.service.update(req.params.id, req.body); // Mettre à jour l'événement
+      if (!updatedEvent) return res.status(404).json({ message: 'Événement non trouvé' });
+      res.json(updatedEvent); // Retourner l'événement mis à jour
+    } catch (error) {
+      next(error); // Passer l'erreur au middleware de gestion des erreurs
+    }
   }
-};
+}
+
+export default new EventController(); // Exporter une instance de EventController
