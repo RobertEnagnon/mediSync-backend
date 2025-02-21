@@ -1,50 +1,70 @@
-
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Database from './config/database';
-import authRoutes from './routes/authRoutes';
+import path from 'path';
+
+// Routes
 import clientRoutes from './routes/clientRoutes';
 import appointmentRoutes from './routes/appointmentRoutes';
-import eventRoutes from './routes/eventRoutes';
-import noteRoutes from './routes/noteRoutes';
-import { errorHandler } from './middleware/errorHandler';
-import { protect } from './middleware/auth';
+import userRoutes from './routes/userRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
+import documentsRoutes from './routes/documentsRoutes';
+import invoiceRoutes from './routes/invoicesRoutes';
 
+// WebSocket
+import initializeWebSocket from './config/websocket.config';
+
+// Middleware
+import { errorHandler } from './middleware/errorHandler';
+
+// Configuration
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const server = createServer(app);
 
-// Middlewares
-app.use(cors());
+// Middleware de base
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes publiques
-app.use('/api/auth', authRoutes);
+// Dossier statique pour les uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes protégées
-app.use('/api/clients', protect, clientRoutes);
-app.use('/api/appointments', protect, appointmentRoutes);
-app.use('/api/events', protect, eventRoutes);
-app.use('/api/notes', protect, noteRoutes);
+// Routes
+app.use('/api/clients', clientRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/documents', documentsRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
-// Error handling
+// Middleware de gestion des erreurs
 app.use(errorHandler);
 
-// Database connection and server start
-const startServer = async () => {
-  try {
-    const database = Database.getInstance();
-    await database.connect();
-    
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
+// Configuration WebSocket
+const io = initializeWebSocket(server);
 
-startServer();
+// Connexion à MongoDB
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/medisync';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('Connecté à MongoDB');
+    
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => {
+      console.log(`Serveur démarré sur le port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Erreur de connexion à MongoDB:', error);
+    process.exit(1);
+  });
+
+export { app, server, io };

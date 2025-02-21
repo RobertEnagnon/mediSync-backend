@@ -1,30 +1,57 @@
-
 import mongoose, { Schema, Document } from 'mongoose';
+
+export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';
 
 export interface IAppointment extends Document {
   title: string;
-  date: string;
-  time: string;
+  date: Date;
+  duration: number; // durée en minutes
   clientId: mongoose.Types.ObjectId;
+  type: AppointmentType;
   notes?: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: AppointmentStatus;
   createdAt: Date;
+  updatedAt: Date;
+  cancelledAt?: Date;
+  cancellationReason?: string;
+  confirmedAt?: Date;
+  completedAt?: Date;
 }
 
 const AppointmentSchema: Schema = new Schema({
   title: { type: String, required: true },
-  date: { type: String, required: true },
-  time: { type: String, required: true },
+  date: { type: Date, required: true },
+  duration: { type: Number, required: true, default: 30 }, // 30 minutes par défaut
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+  type: {
+    type: String,
+    enum: ['consultation', 'follow-up', 'emergency', 'other'],
+    required: true,
+    default: 'consultation'
+  },
   notes: { type: String },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'cancelled'],
+    enum: ['pending', 'scheduled', 'confirmed', 'completed', 'cancelled'],
     default: 'pending'
   },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  cancelledAt: { type: Date },
+  cancellationReason: { type: String },
+  confirmedAt: { type: Date },
+  completedAt: { type: Date }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: function(doc, ret) {
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
 export default mongoose.model<IAppointment>('Appointment', AppointmentSchema);

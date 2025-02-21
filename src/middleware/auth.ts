@@ -1,57 +1,76 @@
-
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiError } from './errorHandler';
 import User, { IUser } from '../models/User';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
 // Extension de l'interface Request pour inclure l'utilisateur
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser;
-    }
-  }
+export interface AuthRequest extends Request {
+  user?: IUser;
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 /**
  * Middleware de protection des routes
+ * Vérifie le token JWT et ajoute l'utilisateur à la requête
  */
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // Vérification de la présence du token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new ApiError(401, 'Not authorized to access this route');
+    let token: string | undefined;
+
+    // Vérifier si le token est présent dans les headers
+    if (req.headers.authorization?.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
     }
 
-    // Extraction et vérification du token
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-
-    // Récupération de l'utilisateur
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      throw new ApiError(401, 'User not found');
+    // Si pas de token, renvoyer une erreur
+    if (!token) {
+      throw new ApiError(401, 'Non autorisé - Token manquant');
     }
 
-    // Ajout de l'utilisateur à la requête
-    req.user = user;
-    next();
+    try {
+      // Vérifier le token
+      const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
+
+      // Récupérer l'utilisateur et l'ajouter à la requête
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+        throw new ApiError(401, 'Non autorisé - Utilisateur non trouvé');
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
+      throw new ApiError(401, 'Non autorisé - Token invalide');
+    }
   } catch (error) {
-    next(new ApiError(401, 'Not authorized to access this route'));
+    next(error);
   }
 };
 
 /**
- * Middleware de vérification des rôles
+ * Génère un token JWT pour un utilisateur
  */
-export const authorize = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      throw new ApiError(403, 'Not authorized to perform this action');
+export const generateToken = (userId: string): string => {
+  return jwt.sign({ id: userId }, JWT_SECRET, {
+    expiresIn: '30d'
+  });
+};
+
+/**
+ * Middleware pour vérifier les rôles d'utilisateur
+ */
+export const checkRole = (roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      throw new ApiError(401, 'Non autorisé - Utilisateur non authentifié');
     }
+
+    if (!roles.includes(req.user.role)) {
+      throw new ApiError(403, 'Non autorisé - Rôle insuffisant');
+    }
+
     next();
   };
 };
