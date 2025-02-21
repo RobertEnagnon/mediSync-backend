@@ -1,11 +1,5 @@
 import express from 'express';
-import {
-    getNotifications,
-    markNotificationAsRead,
-    deleteNotification,
-    markAllNotificationsAsRead,
-    deleteReadNotifications
-} from '../controllers/notificationController';
+import notificationController from "../controllers/notificationController"
 import { protect } from '../middleware/auth';
 
 const router = express.Router();
@@ -14,10 +8,10 @@ const router = express.Router();
 router.use(protect);
 
 // Routes pour les notifications
-router.get('/', getNotifications);
-router.put('/:id/read', markNotificationAsRead);
-router.delete('/:id', deleteNotification);
-router.put('/read-all', markAllNotificationsAsRead);
-router.delete('/delete-read', deleteReadNotifications);
+router.get('/', notificationController.getNotifications);
+router.put('/:id/read', notificationController.markNotificationAsRead);
+router.delete('/:id', notificationController.deleteNotification);
+router.put('/read-all', notificationController.markAllNotificationsAsRead);
+router.delete('/delete-read', notificationController.deleteReadNotifications);
 
 export default router;

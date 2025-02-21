@@ -1,73 +1,91 @@
-
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { ApiError } from '../middleware/errorHandler';
 import User, { IUser } from '../models/User';
+import { generateToken } from '../middleware/auth';
+import { ApiError } from '../middleware/errorHandler';
+import { sendEmail } from '../utils/emailService';
+import crypto from 'crypto';
 
-// Configuration des tokens JWT
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = '24h';
+interface RegisterData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role?: string;
+  specialization?: string;
+  phoneNumber?: string;
+}
 
-class AuthService {
-  /**
-   * Inscription d'un nouvel utilisateur
-   */
-  async register(userData: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-  }): Promise<{ user: IUser; token: string }> {
-    // Vérification si l'email existe déjà
-    const existingUser = await User.findOne({ email: userData.email });
+export class AuthService {
+  async register(data: RegisterData): Promise<{ user: IUser; token: string }> {
+    const { email, password, firstName, lastName, role, specialization, phoneNumber } = data;
+
+    // Vérifier si l'utilisateur existe déjà
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw new ApiError(400, 'Email already exists');
+      throw new ApiError(400, 'Un utilisateur avec cet email existe déjà');
     }
 
-    // Création du token de vérification
+    // Créer le token de vérification
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Création de l'utilisateur
+    // Créer le nouvel utilisateur
     const user = await User.create({
-      ...userData,
-      verificationToken
+      email,
+      password,
+      firstName,
+      lastName,
+      role: role || 'practitioner',
+      specialization,
+      phoneNumber,
+      verificationToken,
+      settings: {
+        theme: 'light',
+        notifications: true,
+        language: 'fr'
+      }
     });
 
-    // TODO: Envoyer l'email de vérification
+    // Envoyer l'email de vérification
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    await sendEmail({
+      to: user.email,
+      subject: 'Vérification de votre compte',
+      text: `Pour vérifier votre compte, cliquez sur ce lien : ${verificationUrl}`
+    });
 
-    const token = this.generateToken(user);
+    // Générer le token
+    const token = generateToken(user._id.toString());
+
     return { user, token };
   }
 
-  /**
-   * Connexion d'un utilisateur
-   */
   async login(email: string, password: string): Promise<{ user: IUser; token: string }> {
+    // Trouver l'utilisateur
     const user = await User.findOne({ email });
     if (!user) {
-      throw new ApiError(401, 'Invalid credentials');
+      throw new ApiError(401, 'Email ou mot de passe incorrect');
     }
 
+    // Vérifier le mot de passe
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      throw new ApiError(401, 'Invalid credentials');
+      throw new ApiError(401, 'Email ou mot de passe incorrect');
     }
 
-    // Mise à jour de la dernière connexion
+    // Mettre à jour la date de dernière connexion
     user.lastLogin = new Date();
     await user.save();
 
-    const token = this.generateToken(user);
+    // Générer le token
+    const token = generateToken(user._id.toString());
+
     return { user, token };
   }
 
-  /**
-   * Vérification de l'email d'un utilisateur
-   */
   async verifyEmail(token: string): Promise<void> {
     const user = await User.findOne({ verificationToken: token });
+    
     if (!user) {
-      throw new ApiError(400, 'Invalid verification token');
+      throw new ApiError(400, 'Token de vérification invalide');
     }
 
     user.isVerified = true;
@@ -75,55 +93,56 @@ class AuthService {
     await user.save();
   }
 
-  /**
-   * Demande de réinitialisation de mot de passe
-   */
   async forgotPassword(email: string): Promise<void> {
+    // Trouver l'utilisateur
     const user = await User.findOne({ email });
     if (!user) {
-      throw new ApiError(404, 'User not found');
+      throw new ApiError(404, 'Aucun utilisateur trouvé avec cet email');
     }
 
+    // Générer un token de réinitialisation
     const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 heure
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Sauvegarder le token dans la base de données
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     await user.save();
 
-    // TODO: Envoyer l'email de réinitialisation
+    // Envoyer l'email
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    await sendEmail({
+      to: user.email,
+      subject: 'Réinitialisation de mot de passe',
+      text: `Pour réinitialiser votre mot de passe, cliquez sur ce lien : ${resetUrl}`
+    });
   }
 
-  /**
-   * Réinitialisation du mot de passe
-   */
   async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Hash le token reçu
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Trouver l'utilisateur avec le token valide
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() }
     });
 
     if (!user) {
-      throw new ApiError(400, 'Invalid or expired reset token');
+      throw new ApiError(400, 'Token invalide ou expiré');
     }
 
+    // Mettre à jour le mot de passe
     user.password = newPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
-  }
-
-  /**
-   * Génération d'un token JWT
-   */
-  private generateToken(user: IUser): string {
-    return jwt.sign(
-      { 
-        id: user._id,
-        email: user.email,
-        role: user.role 
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
   }
 }
 

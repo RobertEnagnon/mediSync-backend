@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiError } from './errorHandler';
-import User, { IUser } from '../models/User';
+import User from '../models/User';
+import { AuthRequest } from '../types/express';
 
-// Extension de l'interface Request pour inclure l'utilisateur
-export interface AuthRequest extends Request {
-  user?: IUser;
-}
+// // Extension de l'interface Request pour inclure l'utilisateur
+// export interface AuthRequest extends Request {
+//   user?: User;
+// }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -16,7 +17,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
  */
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    let token: string | undefined;
+    let token;
 
     // Vérifier si le token est présent dans les headers
     if (req.headers.authorization?.startsWith('Bearer')) {
@@ -32,17 +33,21 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       // Vérifier le token
       const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
 
-      // Récupérer l'utilisateur et l'ajouter à la requête
-      const user = await User.findById(decoded.id).select('-password');
-      
+      // Récupérer l'utilisateur
+      const user = await User.findById(decoded.id);
       if (!user) {
         throw new ApiError(401, 'Non autorisé - Utilisateur non trouvé');
       }
 
+      // Ajouter l'utilisateur à la requête
       req.user = user;
       next();
     } catch (error) {
-      throw new ApiError(401, 'Non autorisé - Token invalide');
+      if (error instanceof jwt.JsonWebTokenError) {
+        next(new ApiError(401, 'Non autorisé - Token invalide'));
+      } else {
+        next(error);
+      }
     }
   } catch (error) {
     next(error);
@@ -54,7 +59,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
  */
 export const generateToken = (userId: string): string => {
   return jwt.sign({ id: userId }, JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: '24h'
   });
 };
 

@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
+// import { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../types/express';
 import User from '../models/User';
 import { ApiError } from '../middleware/errorHandler';
 
@@ -30,7 +31,7 @@ export const updateUserProfile = async (req: AuthRequest, res: Response) => {
             throw new ApiError(401, 'Utilisateur non authentifié');
         }
 
-        const { name, email, specialization, phoneNumber } = req.body;
+        const { firstName,lastName, email, specialization, phoneNumber } = req.body;
 
         const user = await User.findById(userId);
         if (!user) {
@@ -38,7 +39,8 @@ export const updateUserProfile = async (req: AuthRequest, res: Response) => {
         }
 
         // Mise à jour des champs
-        if (name) user.name = name;
+        if (firstName) user.firstName = firstName;
+        if (lastName) user.lastName = lastName;
         if (email) user.email = email;
         if (specialization) user.specialization = specialization;
         if (phoneNumber) user.phoneNumber = phoneNumber;

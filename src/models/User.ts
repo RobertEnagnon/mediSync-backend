@@ -5,7 +5,8 @@ import bcrypt from 'bcrypt';
 export interface IUser extends Document {
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   role: string;
   specialization?: string;
   phoneNumber?: string;
@@ -14,6 +15,11 @@ export interface IUser extends Document {
     notifications: boolean;
     language: string;
   };
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  isVerified: boolean;
+  verificationToken?: string;
+  lastLogin?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -31,7 +37,12 @@ const UserSchema: Schema = new Schema<IUser>({
     required: true,
     minlength: 6 
   },
-  name: { 
+  firstName: { 
+    type: String, 
+    required: true,
+    trim: true 
+  },
+  lastName: { 
     type: String, 
     required: true,
     trim: true 
@@ -62,6 +73,16 @@ const UserSchema: Schema = new Schema<IUser>({
       type: String,
       default: 'fr'
     }
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String,
+  lastLogin: {
+    type: Date
   }
 }, {
   timestamps: true,
@@ -72,9 +93,17 @@ const UserSchema: Schema = new Schema<IUser>({
       delete ret._id;
       delete ret.__v;
       delete ret.password;
+      delete ret.resetPasswordToken;
+      delete ret.resetPasswordExpires;
+      delete ret.verificationToken;
       return ret;
     }
   }
+});
+
+// Virtual pour le nom complet
+UserSchema.virtual('fullName').get(function() {
+  return `${this.firstName} ${this.lastName}`;
 });
 
 // Middleware pour hasher le mot de passe avant la sauvegarde

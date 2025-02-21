@@ -1,4 +1,3 @@
-
 import { Request, Response, NextFunction } from 'express';
 import AuthService from '../services/AuthService';
 
@@ -10,7 +9,21 @@ class AuthController {
    */
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { user, token } = await AuthService.register(req.body);
+      const { email, password, firstName, lastName, role } = req.body;
+
+      // Validation des champs requis
+      if (!email || !password || !firstName || !lastName) {
+        throw new Error('Veuillez fournir tous les champs requis');
+      }
+
+      const { user, token } = await AuthService.register({
+        email,
+        password,
+        firstName,
+        lastName,
+        role
+      });
+
       res.status(201).json({
         success: true,
         token,
@@ -35,7 +48,13 @@ class AuthController {
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body;
+
+      if (!email || !password) {
+        throw new Error('Veuillez fournir l\'email et le mot de passe');
+      }
+
       const { user, token } = await AuthService.login(email, password);
+
       res.json({
         success: true,
         token,
@@ -76,7 +95,14 @@ class AuthController {
    */
   forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await AuthService.forgotPassword(req.body.email);
+      const { email } = req.body;
+
+      if (!email) {
+        throw new Error('Veuillez fournir une adresse email');
+      }
+
+      await AuthService.forgotPassword(email);
+
       res.json({
         success: true,
         message: 'Password reset email sent'
@@ -93,7 +119,14 @@ class AuthController {
    */
   resetPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await AuthService.resetPassword(req.params.token, req.body.password);
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        throw new Error('Veuillez fournir le token et le nouveau mot de passe');
+      }
+
+      await AuthService.resetPassword(token, newPassword);
+
       res.json({
         success: true,
         message: 'Password reset successful'

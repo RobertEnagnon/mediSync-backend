@@ -1,89 +1,119 @@
 import { Request, Response } from 'express';
+import { ApiError } from '../middleware/errorHandler';
 import Notification from '../models/Notification';
+import { AuthRequest } from '../types/express';
 
-// Obtenir toutes les notifications de l'utilisateur
-export const getNotifications = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.id;
+class NotificationController {
+    async getNotifications(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            throw new ApiError(401, 'Utilisateur non authentifié');
+        }
+
+        const notifications = await Notification.find({ 
+            userId,
+            isRead: false 
+        }).sort({ createdAt: -1 });
+
+        res.json(notifications);
+    }
+
+    async getAllNotifications(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            throw new ApiError(401, 'Utilisateur non authentifié');
+        }
+
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = (page - 1) * limit;
+
         const notifications = await Notification.find({ userId })
             .sort({ createdAt: -1 })
-            .limit(100);
-        
-        res.json(notifications);
-    } catch (error) {
-        console.error('Erreur lors de la récupération des notifications:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Notification.countDocuments({ userId });
+
+        res.json({
+            notifications,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalNotifications: total
+        });
     }
-};
 
-// Marquer une notification comme lue
-export const markNotificationAsRead = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user?.id;
-
-        const notification = await Notification.findOne({ _id: id, userId });
-        
-        if (!notification) {
-            return res.status(404).json({ message: 'Notification non trouvée' });
+    async markNotificationAsRead(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            throw new ApiError(401, 'Utilisateur non authentifié');
         }
 
-        notification.read = true;
-        await notification.save();
+        const { notificationId } = req.params;
+
+        const notification = await Notification.findOneAndUpdate(
+            { _id: notificationId, userId },
+            { isRead: true },
+            { new: true }
+        );
+
+        if (!notification) {
+            throw new ApiError(404, 'Notification non trouvée');
+        }
 
         res.json(notification);
-    } catch (error) {
-        console.error('Erreur lors du marquage de la notification:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
     }
-};
 
-// Supprimer une notification
-export const deleteNotification = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user?.id;
-
-        const notification = await Notification.findOneAndDelete({ _id: id, userId });
-        
-        if (!notification) {
-            return res.status(404).json({ message: 'Notification non trouvée' });
+    async markAllNotificationsAsRead(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            throw new ApiError(401, 'Utilisateur non authentifié');
         }
 
-        res.json({ message: 'Notification supprimée' });
-    } catch (error) {
-        console.error('Erreur lors de la suppression de la notification:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
-    }
-};
-
-// Marquer toutes les notifications comme lues
-export const markAllNotificationsAsRead = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.id;
-        
         await Notification.updateMany(
-            { userId, read: false },
-            { $set: { read: true } }
+            { userId, isRead: false },
+            { isRead: true }
         );
 
         res.json({ message: 'Toutes les notifications ont été marquées comme lues' });
-    } catch (error) {
-        console.error('Erreur lors du marquage des notifications:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
     }
-};
 
-// Supprimer toutes les notifications lues
-export const deleteReadNotifications = async (req: Request, res: Response) => {
-    try {
-        const userId = req.user?.id;
-        
-        await Notification.deleteMany({ userId, read: true });
+    async deleteNotification(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            throw new ApiError(401, 'Utilisateur non authentifié');
+        }
 
-        res.json({ message: 'Toutes les notifications lues ont été supprimées' });
-    } catch (error) {
-        console.error('Erreur lors de la suppression des notifications:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        const { notificationId } = req.params;
+
+        const notification = await Notification.findOneAndDelete({
+            _id: notificationId,
+            userId
+        });
+
+        if (!notification) {
+            throw new ApiError(404, 'Notification non trouvée');
+        }
+
+        res.json({ message: 'Notification supprimée avec succès' });
     }
-};
+
+    async deleteReadNotifications(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            throw new ApiError(401, 'Utilisateur non authentifié');
+        }
+
+        const result = await Notification.deleteMany({
+            userId,
+            isRead: true
+        });
+
+        res.json({ 
+            message: 'Toutes les notifications lues ont été supprimées',
+            count: result.deletedCount
+        });
+    }
+}
+
+export default new NotificationController();
