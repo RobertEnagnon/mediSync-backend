@@ -9,7 +9,7 @@ class AuthController {
    */
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, password, firstName, lastName, role } = req.body;
+      const { email, password, firstName, lastName, role,phoneNumber,specialization } = req.body;
 
       // Validation des champs requis
       if (!email || !password || !firstName || !lastName) {
@@ -21,7 +21,9 @@ class AuthController {
         password,
         firstName,
         lastName,
-        role
+        role,
+        specialization,
+        phoneNumber
       });
 
       res.status(201).json({
@@ -78,6 +80,7 @@ class AuthController {
    */
   verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log("token verify: ", req.params.token);
       await AuthService.verifyEmail(req.params.token);
       res.json({
         success: true,

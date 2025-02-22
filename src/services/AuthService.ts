@@ -17,15 +17,15 @@ interface RegisterData {
 export class AuthService {
   async register(data: RegisterData): Promise<{ user: IUser; token: string }> {
     const { email, password, firstName, lastName, role, specialization, phoneNumber } = data;
-
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       throw new ApiError(400, 'Un utilisateur avec cet email existe déjà');
     }
+    console.log('existingUser: ', existingUser);
 
     // Créer le token de vérification
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationToken = crypto.randomBytes(32).toString('hex').trim();
 
     // Créer le nouvel utilisateur
     const user = await User.create({
@@ -45,11 +45,12 @@ export class AuthService {
     });
 
     // Envoyer l'email de vérification
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/?token=${verificationToken}`;
     await sendEmail({
       to: user.email,
       subject: 'Vérification de votre compte',
-      text: `Pour vérifier votre compte, cliquez sur ce lien : ${verificationUrl}`
+      text: `Pour vérifier votre compte, cliquez sur ce lien : ${verificationUrl}`,
+      html: '',
     });
 
     // Générer le token
@@ -59,8 +60,10 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<{ user: IUser; token: string }> {
+    console.log("login: ", email, password);
     // Trouver l'utilisateur
     const user = await User.findOne({ email });
+
     if (!user) {
       throw new ApiError(401, 'Email ou mot de passe incorrect');
     }
@@ -83,6 +86,7 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     const user = await User.findOne({ verificationToken: token });
+    console.log('verif: ', user);
     
     if (!user) {
       throw new ApiError(400, 'Token de vérification invalide');
