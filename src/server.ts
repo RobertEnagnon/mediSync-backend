@@ -15,6 +15,7 @@ import documentsRoutes from './routes/documentsRoutes';
 import invoicesRoutes from './routes/invoicesRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import eventRoutes from './routes/eventRoutes';
+import dashboardRoutes from "./routes/dashboardRoutes";
 
 // WebSocket
 import initializeWebSocket from './config/websocket.config';
@@ -44,6 +45,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRoutes);
 
 // Routes protégées
+app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/clients', protect, clientRoutes);
 app.use('/api/appointments', protect, appointmentRoutes);
 app.use('/api/users', protect, userRoutes);

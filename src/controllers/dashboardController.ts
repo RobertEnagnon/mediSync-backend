@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
-import { Appointment } from '../models/Appointment';
-import { Client } from '../models/Client';
-import { User } from '../models/User';
-import { NotificationModel } from '../models/Notification';
+import Appointment from '../models/Appointment';
+import Client from '../models/Client';
+import User from '../models/User';
+import Notification from '../models/Notification';
+import { Types } from 'mongoose';
+import { AuthRequest } from '../types/express';
 
 /**
  * Contrôleur pour gérer les fonctionnalités du tableau de bord
@@ -11,9 +13,14 @@ export class DashboardController {
   /**
    * Récupère toutes les statistiques pour le tableau de bord
    */
-  public static async getDashboardStats(req: Request, res: Response) {
+  public static async getDashboardStats(req: AuthRequest, res: Response) {
     try {
-      const userId = req.user.id;
+      // Vérification de l'utilisateur authentifié
+      if (!req.user?._id) {
+        return res.status(401).json({ message: 'Utilisateur non authentifié' });
+      }
+
+      const userId = req.user._id;
       const today = new Date();
       const startOfDay = new Date(today.setHours(0, 0, 0, 0));
       const endOfDay = new Date(today.setHours(23, 59, 59, 999));
@@ -49,7 +56,7 @@ export class DashboardController {
       const totalAppointmentsToday = todayAppointments.length;
 
       // Récupère les notifications non lues
-      const unreadNotifications = await NotificationModel.countDocuments({
+      const unreadNotifications = await Notification.countDocuments({
         userId,
         read: false
       });
@@ -91,9 +98,14 @@ export class DashboardController {
   /**
    * Récupère les données pour le graphique d'activité
    */
-  public static async getActivityChart(req: Request, res: Response) {
+  public static async getActivityChart(req: AuthRequest, res: Response) {
     try {
-      const userId = req.user.id;
+      // Vérification de l'utilisateur authentifié
+      if (!req.user?._id) {
+        return res.status(401).json({ message: 'Utilisateur non authentifié' });
+      }
+
+      const userId = req.user._id;
       const today = new Date();
       const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
