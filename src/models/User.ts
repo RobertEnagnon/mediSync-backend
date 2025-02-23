@@ -67,7 +67,7 @@ const UserSchema: Schema = new Schema<IUser>({
     },
     notifications: {
       type: Boolean,
-      default: true
+      default: true 
     },
     language: {
       type: String,
