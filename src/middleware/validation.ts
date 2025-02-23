@@ -3,6 +3,7 @@ import { ApiError } from './errorHandler';
 
 export const validateId = (req: Request, res: Response, next: NextFunction) => {
   const id = req.params.id;
+  console.log("validateId: ", id)
   if (!id.match(/^[0-9a-fA-F]{24}$/)) {
     throw new ApiError(400, 'Invalid ID format');
   }
@@ -10,14 +11,17 @@ export const validateId = (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const validateClientData = (req: Request, res: Response, next: NextFunction) => {
-  const { name, email, phone } = req.body;
+  const { firstName,lastName, email, phone } = req.body;
   
-  if (!name || !email || !phone) {
+  if (!firstName || !lastName || !email || !phone) {
     throw new ApiError(400, 'Missing required fields');
   }
 
-  if (typeof name !== 'string' || name.trim().length < 2) {
-    throw new ApiError(400, 'Invalid name');
+  if (typeof firstName !== 'string' || firstName.trim().length < 2) {
+    throw new ApiError(400, 'Invalid firstname');
+  }
+  if (typeof lastName !== 'string' || lastName.trim().length < 2) {
+    throw new ApiError(400, 'Invalid lastName');
   }
 
   if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {

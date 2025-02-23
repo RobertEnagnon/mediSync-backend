@@ -8,6 +8,7 @@ export interface IAppointment extends Document {
   date: Date;
   duration: number; // durée en minutes
   clientId: mongoose.Types.ObjectId;
+  practitionerId: mongoose.Types.ObjectId;
   type: AppointmentType;
   notes?: string;
   status: AppointmentStatus;
@@ -24,6 +25,7 @@ const AppointmentSchema: Schema = new Schema({
   date: { type: Date, required: true },
   duration: { type: Number, required: true, default: 30 }, // 30 minutes par défaut
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+  practitionerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: {
     type: String,
     enum: ['consultation', 'follow-up', 'emergency', 'other'],
@@ -53,5 +55,14 @@ const AppointmentSchema: Schema = new Schema({
     }
   }
 });
+
+// Index pour la recherche par praticien et date
+AppointmentSchema.index({ practitionerId: 1, date: 1 });
+
+// Index pour la recherche par client
+AppointmentSchema.index({ clientId: 1 });
+
+// Index pour le status
+AppointmentSchema.index({ status: 1 });
 
 export default mongoose.model<IAppointment>('Appointment', AppointmentSchema);

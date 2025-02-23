@@ -2,6 +2,7 @@ import { BaseService } from './BaseService';
 import Client, { IClient } from '../models/Client';
 import { startOfDay, endOfDay, addDays, subDays } from 'date-fns';
 import { ApiError } from '../middleware/errorHandler';
+import { Types } from 'mongoose';
 
 /**
  * Service pour la gestion des clients
@@ -71,6 +72,20 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
+   * Supprimer un client grace a son id et par sont practitionner
+   * @param id L'ID du client
+   * @param practitionerId L'ID du practitionner
+   * @return le client supprimé
+   */
+  async deleteClient(id: string, practitionerId: Types.ObjectId): Promise<any> {
+    const result = await Client.findOneAndDelete({
+            _id: id,
+            practitionerId
+          });
+    return result;
+  }
+
+  /**
    * Mettre à jour la date de dernière visite
    * @param clientId L'ID du client
    * @returns Le client mis à jour
@@ -96,15 +111,16 @@ export class ClientService extends BaseService<IClient> {
    * @param query Le terme de recherche
    * @returns Liste des clients correspondants
    */
-  async search(query: string): Promise<IClient[]> {
-    const searchRegex = new RegExp(query, 'i');
+  async search(query: string, practitionerId: Types.ObjectId): Promise<IClient[]> {
+    // const searchRegex = new RegExp(query, 'i');
     return this.model.find({
       isArchived: false,
+      practitionerId,
       $or: [
-        { firstName: searchRegex },
-        { lastName: searchRegex },
-        { email: searchRegex },
-        { phone: searchRegex }
+        { firstName: { $regex: query, $options: 'i' } },
+        { lastName: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+        { phone: { $regex: query, $options: 'i' } }
       ]
     }).sort({ lastName: 1, firstName: 1 });
   }
@@ -181,6 +197,7 @@ export class ClientService extends BaseService<IClient> {
     ]);
   }
 
+  
   /**
    * Trouver les clients inactifs
    * @param inactiveDate Date à partir de laquelle un client est considéré comme inactif

@@ -13,7 +13,7 @@ export abstract class BaseController<T extends Document> {
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const items = await this.service.getAll();
-      res.json(items);
+      return res.json(items);
     } catch (error) {
       next(error);
     }
@@ -22,7 +22,7 @@ export abstract class BaseController<T extends Document> {
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const item = await this.service.getById(req.params.id);
-      res.json(item);
+     return res.json(item);
     } catch (error) {
       next(error);
     }
@@ -31,7 +31,7 @@ export abstract class BaseController<T extends Document> {
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const item = await this.service.create(req.body);
-      res.status(201).json(item);
+     return res.status(201).json(item);
     } catch (error) {
       next(error);
     }
@@ -40,7 +40,7 @@ export abstract class BaseController<T extends Document> {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const item = await this.service.update(req.params.id, req.body);
-      res.json(item);
+      return res.json(item);
     } catch (error) {
       next(error);
     }
@@ -49,7 +49,7 @@ export abstract class BaseController<T extends Document> {
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.service.delete(req.params.id);
-      res.status(204).send();
+    return  res.status(204).send();
     } catch (error) {
       next(error);
     }
