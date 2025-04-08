@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import Client from '../models/Client';
+import Appointment from '../models/Appointment';
 import { AuthRequest } from '../types/express';
 import clientService from '../services/ClientService';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 export class ClientController {
   /**
@@ -276,6 +278,60 @@ export class ClientController {
     } catch (error) {
       console.error('Erreur lors de la récupération des anniversaires:', error);
       return res.status(500).json({ message: 'Erreur lors de la récupération des anniversaires' });
+    }
+  }
+
+  /**
+   * Récupère les statistiques des clients
+   */
+  public static async getStatistics(req: AuthRequest, res: Response) {
+    try {
+      const practitionerId = req.user?._id;
+
+      // Total des clients
+      const total = await Client.countDocuments({ practitionerId });
+
+      // Nouveaux clients ce mois-ci
+      const now = new Date();
+      const startOfThisMonth = startOfMonth(now);
+      const endOfThisMonth = endOfMonth(now);
+      const newThisMonth = await Client.countDocuments({
+        practitionerId,
+        createdAt: {
+          $gte: startOfThisMonth,
+          $lte: endOfThisMonth
+        }
+      });
+
+      // Anniversaires ce mois
+      const currentMonth = now.getMonth() + 1;
+      const birthdays = await Client.countDocuments({
+        practitionerId,
+        $expr: {
+          $eq: [{ $month: '$birthDate' }, currentMonth]
+        }
+      });
+
+      // Rendez-vous
+      const appointments = {
+        upcoming: await Appointment.countDocuments({
+          practitionerId,
+          startDate: { $gte: now },
+          status: { $ne: 'cancelled' }
+        }),
+        total: await Appointment.countDocuments({
+          practitionerId
+        })
+      };
+
+      res.json({
+        total,
+        newThisMonth,
+        birthdays,
+        appointments
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   }
 

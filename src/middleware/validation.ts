@@ -1,62 +1,109 @@
 import { Request, Response, NextFunction } from 'express';
+import { isValidObjectId } from 'mongoose';
 import { ApiError } from './errorHandler';
 
+/**
+ * Middleware pour valider les IDs MongoDB
+ */
 export const validateId = (req: Request, res: Response, next: NextFunction) => {
-  const id = req.params.id;
-  console.log("validateId: ", id)
-  if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-    throw new ApiError(400, 'Invalid ID format');
-  }
-  next();
-};
-
-export const validateClientData = (req: Request, res: Response, next: NextFunction) => {
-  const { firstName,lastName, email, phone } = req.body;
+  // Récupérer tous les paramètres qui pourraient contenir un ID
+  const idParams = ['id', 'clientId', 'practitionerId', 'appointmentId', 'documentId'];
   
-  if (!firstName || !lastName || !email || !phone) {
-    throw new ApiError(400, 'Missing required fields');
+  for (const param of idParams) {
+    const id = req.params[param];
+    if (id !== undefined && !isValidObjectId(id)) {
+      return res.status(400).json({
+        message: `ID invalide: ${id} pour le paramètre ${param}`
+      });
+    }
   }
-
-  if (typeof firstName !== 'string' || firstName.trim().length < 2) {
-    throw new ApiError(400, 'Invalid firstname');
-  }
-  if (typeof lastName !== 'string' || lastName.trim().length < 2) {
-    throw new ApiError(400, 'Invalid lastName');
-  }
-
-  if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-    throw new ApiError(400, 'Invalid email format');
-  }
-
+  
   next();
 };
 
+/**
+ * Middleware pour valider les données d'un rendez-vous
+ */
 export const validateAppointmentData = (req: Request, res: Response, next: NextFunction) => {
-  const { title, date, time, clientId } = req.body;
-  
-  if (!title || !date || !time || !clientId) {
-    throw new ApiError(400, 'Missing required fields');
+  const { startDate, endDate, clientId } = req.body;
+
+  if (!startDate || !endDate || !clientId) {
+    return res.status(400).json({
+      message: 'Les champs startDate, endDate et clientId sont requis'
+    });
   }
 
-  if (typeof title !== 'string' || title.trim().length < 2) {
-    throw new ApiError(400, 'Invalid title');
+  if (!isValidObjectId(clientId)) {
+    return res.status(400).json({
+      message: 'ID de client invalide'
+    });
   }
 
-  if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    throw new ApiError(400, 'Invalid date format (YYYY-MM-DD required)');
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return res.status(400).json({
+      message: 'Dates invalides'
+    });
   }
 
-  if (!time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-    throw new ApiError(400, 'Invalid time format (HH:mm required)');
-  }
-
-  if (!clientId.match(/^[0-9a-fA-F]{24}$/)) {
-    throw new ApiError(400, 'Invalid client ID format');
+  if (start >= end) {
+    return res.status(400).json({
+      message: 'La date de début doit être antérieure à la date de fin'
+    });
   }
 
   next();
 };
 
+/**
+ * Middleware pour valider les données d'un client
+ */
+export const validateClientData = (req: Request, res: Response, next: NextFunction) => {
+  const { firstName, lastName, email, phone } = req.body;
+
+  if (!firstName || !lastName || !email || !phone) {
+    return res.status(400).json({
+      message: 'Les champs firstName, lastName, email et phone sont requis'
+    });
+  }
+
+  // Validation simple de l'email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      message: 'Format d\'email invalide'
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware pour valider les données d'un document
+ */
+export const validateDocumentData = (req: Request, res: Response, next: NextFunction) => {
+  const { title, clientId } = req.body;
+
+  if (!title || !clientId) {
+    return res.status(400).json({
+      message: 'Les champs title et clientId sont requis'
+    });
+  }
+
+  if (!isValidObjectId(clientId)) {
+    return res.status(400).json({
+      message: 'ID de client invalide'
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware pour valider les données d'inscription
+ */
 export const validateRegisterData = (req: Request, res: Response, next: NextFunction) => {
   const { email, password, firstName, lastName } = req.body;
   
@@ -75,6 +122,9 @@ export const validateRegisterData = (req: Request, res: Response, next: NextFunc
   next();
 };
 
+/**
+ * Middleware pour valider les données de connexion
+ */
 export const validateLoginData = (req: Request, res: Response, next: NextFunction) => {
   const { email, password } = req.body;
   
