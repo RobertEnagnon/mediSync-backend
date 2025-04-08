@@ -65,12 +65,14 @@ export class AuthService {
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.log("erreur user not find")
       throw new ApiError(401, 'Email ou mot de passe incorrect');
     }
 
     // Vérifier le mot de passe
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log("ereur mot de pas incorrect")
       throw new ApiError(401, 'Email ou mot de passe incorrect');
     }
 

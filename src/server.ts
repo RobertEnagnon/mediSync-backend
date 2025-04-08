@@ -8,6 +8,7 @@ import path from 'path';
 // Routes
 import authRoutes from './routes/authRoutes';
 import clientRoutes from './routes/clientRoutes';
+import noteRoutes from "./routes/noteRoutes";
 import appointmentRoutes from './routes/appointmentRoutes';
 import userRoutes from './routes/userRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
@@ -47,6 +48,7 @@ app.use('/api/auth', authRoutes);
 // Routes protégées
 app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/clients', protect, clientRoutes);
+app.use('/api/notes', protect, noteRoutes);
 app.use('/api/appointments', protect, appointmentRoutes);
 app.use('/api/users', protect, userRoutes);
 app.use('/api/analytics', protect, analyticsRoutes);

@@ -1,12 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
 import { BaseController } from './BaseController';
-import { IAppointment } from '../models/Appointment';
+import Appointment, { IAppointment } from '../models/Appointment';
 import AppointmentService from '../services/AppointmentService';
+import { AuthRequest } from '@/types/express';
+import { Types } from 'mongoose';
 
 export class AppointmentController extends BaseController<IAppointment> {
   constructor() {
     super(AppointmentService);
   }
+
+   /**
+     * Récupère tous les rendez-vous du praticien
+     */
+   getAll= async (req: AuthRequest, res: Response) => {
+      try {
+        if (!req.user?._id) {
+          return res.status(401).json({ message: 'Utilisateur non authentifié' });
+        }
+  
+        const practitionerId = new Types.ObjectId(req.user._id);
+        console.log("practitionerId: ", practitionerId)
+        const appointments = await Appointment.find({ practitionerId });
+       return res.json(appointments);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des rendez-vous:', error);
+        return  res.status(500).json({ message: 'Erreur lors de la récupération des rendez-vous' });
+      }
+    }
 
   search = async (req: Request, res: Response, next: NextFunction) => {
     try {

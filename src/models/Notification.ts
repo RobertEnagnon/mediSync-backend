@@ -8,7 +8,7 @@ export interface INotification extends Document {
   title: string;
   message: string;
   data?: {
-    appointmentId?: string;
+    appointmentId?: string; 
     date?: Date;
     oldDate?: Date;
     newDate?: Date;
