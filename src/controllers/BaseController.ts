@@ -20,6 +20,7 @@ export abstract class BaseController<T extends Document> {
   };
 
   getById = async (req: Request, res: Response, next: NextFunction) => {
+    console.log("appointements getbyId:")
     try {
       const item = await this.service.getById(req.params.id);
      return res.json(item);

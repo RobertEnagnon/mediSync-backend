@@ -50,6 +50,9 @@ const upload = multer({
 // Routes pour les documents
 router.use(protect);
 
+// Route pour obtenir tous les documents
+router.get('/', documentController.getAllDocuments);
+
 // Route pour télécharger un document
 router.post('/upload', upload.single('file'), (req, res) => {
   documentController.uploadDocument(req as RequestWithFile, res);

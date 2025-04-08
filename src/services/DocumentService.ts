@@ -18,6 +18,16 @@ export class DocumentService extends BaseService<IDocument> {
   }
 
   /**
+   * Récupérer tous les documents
+   */
+  async getAllDocuments(): Promise<IDocument[]> {
+    return this.model
+      .find()
+      .populate('clientId', 'firstName lastName')
+      .sort({ createdAt: -1 });
+  }
+
+  /**
    * Télécharger un nouveau document
    */
   async uploadDocument(

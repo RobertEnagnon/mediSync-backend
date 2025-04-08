@@ -15,6 +15,19 @@ export class DocumentController {
     this.documentService = new DocumentService();
   }
 
+  public getAllDocuments = async (req: Request, res: Response) => {
+    try {
+      const documents = await this.documentService.getAllDocuments();
+      res.json(documents);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Erreur lors de la récupération des documents' });
+      }
+    }
+  };
+
   public uploadDocument = async (req: RequestWithFile, res: Response) => {
     try {
       if (!req.file) {
