@@ -1,36 +1,155 @@
-import { BaseService } from './BaseService'; // Importer la classe de base
-import Event, { IEvent } from '../models/Event'; // Importer le modèle Event
+import { PractitionerService } from './PractitionerService';
+import Event, { IEvent } from '../models/Event';
+import { startOfDay, endOfDay, addDays } from 'date-fns';
 
-export class EventService extends BaseService<IEvent> {
+export class EventService extends PractitionerService<IEvent> {
   constructor() {
-    super(Event); // Appeler le constructeur de BaseService avec le modèle Event
+    super(Event);
   }
 
-  // Récupérer tous les événements
+  // Surcharge des méthodes de BaseService pour forcer l'utilisation des méthodes avec practitionerId
   async getAll(): Promise<IEvent[]> {
-    return this.model.find(); // Récupérer tous les événements
+    throw new Error('Use getAllForPractitioner instead');
   }
 
-  // Récupérer un événement par ID
   async getById(id: string): Promise<IEvent | null> {
-    return this.model.findById(id); // Récupérer l'événement par ID
+    throw new Error('Use getByIdForPractitioner instead');
   }
 
-  // Créer un nouvel événement
-  async create(data: Partial<IEvent>): Promise<IEvent> {
-    const event = new this.model(data); // Créer une nouvelle instance de Event
-    return event.save(); // Sauvegarder l'événement dans la base de données
-  }
-
-  // Mettre à jour un événement existant
   async update(id: string, data: Partial<IEvent>): Promise<IEvent | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true }); // Mettre à jour l'événement
+    throw new Error('Use updateForPractitioner instead');
   }
 
-  // Supprimer un événement
   async delete(id: string): Promise<void> {
-    await this.model.findByIdAndDelete(id); // Supprimer l'événement
+    throw new Error('Use deleteForPractitioner instead');
+  }
+
+  // Méthodes spécifiques aux événements
+  async getEventsByDateRange(
+    practitionerId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<IEvent[]> {
+    return this.model.find({
+      practitionerId,
+      date: {
+        $gte: startOfDay(startDate),
+        $lte: endOfDay(endDate)
+      }
+    }).sort({ date: 1, startTime: 1 });
+  }
+
+  async getTodayEvents(practitionerId: string): Promise<IEvent[]> {
+    const today = new Date();
+    return this.getEventsByDateRange(practitionerId, today, today);
+  }
+
+  async getUpcomingEvents(practitionerId: string, days: number = 7): Promise<IEvent[]> {
+    const startDate = new Date();
+    const endDate = addDays(startDate, days);
+    
+    return this.model.find({
+      practitionerId,
+      date: { $gte: startDate, $lte: endDate },
+      status: { $nin: ['completed', 'cancelled'] }
+    }).sort({ date: 1, startTime: 1 });
+  }
+
+  async searchEvents(
+    practitionerId: string,
+    query: string,
+    filters?: {
+      startDate?: Date;
+      endDate?: Date;
+      type?: string;
+      status?: string;
+    }
+  ): Promise<IEvent[]> {
+    const searchQuery: any = {
+      practitionerId,
+      $or: [
+        { title: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+        { location: { $regex: query, $options: 'i' } }
+      ]
+    };
+
+    if (filters) {
+      if (filters.startDate && filters.endDate) {
+        searchQuery.date = {
+          $gte: startOfDay(filters.startDate),
+          $lte: endOfDay(filters.endDate)
+        };
+      }
+      if (filters.type) searchQuery.type = filters.type;
+      if (filters.status) searchQuery.status = filters.status;
+    }
+
+    return this.model.find(searchQuery).sort({ date: 1, startTime: 1 });
+  }
+
+  async updateStatus(
+    id: string,
+    practitionerId: string,
+    status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled'
+  ): Promise<IEvent | null> {
+    return this.updateForPractitioner(id, practitionerId, { status });
+  }
+
+  async createRecurringEvent(
+    eventData: Partial<IEvent>,
+    recurrencePattern: {
+      frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+      interval: number;
+      endDate: Date;
+      daysOfWeek?: number[];
+    }
+  ): Promise<IEvent[]> {
+    const events: IEvent[] = [];
+    const startDate = new Date(eventData.date!);
+    const endDate = new Date(recurrencePattern.endDate);
+    let currentDate = startDate;
+
+    while (currentDate <= endDate) {
+      if (recurrencePattern.frequency === 'weekly' && recurrencePattern.daysOfWeek) {
+        if (recurrencePattern.daysOfWeek.includes(currentDate.getDay())) {
+          const event = await this.create({
+            ...eventData,
+            date: new Date(currentDate),
+            isRecurring: true,
+            recurrencePattern
+          });
+          events.push(event);
+        }
+      } else {
+        const event = await this.create({
+          ...eventData,
+          date: new Date(currentDate),
+          isRecurring: true,
+          recurrencePattern
+        });
+        events.push(event);
+      }
+
+      // Incrémenter la date selon la fréquence
+      switch (recurrencePattern.frequency) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + recurrencePattern.interval);
+          break;
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + (7 * recurrencePattern.interval));
+          break;
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + recurrencePattern.interval);
+          break;
+        case 'yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + recurrencePattern.interval);
+          break;
+      }
+    }
+
+    return events;
   }
 }
 
-export default new EventService(); // Exporter une instance de EventService
+export default new EventService();

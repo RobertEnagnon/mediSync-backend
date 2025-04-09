@@ -4,10 +4,6 @@ import { ApiError } from './errorHandler';
 import User from '../models/User';
 import { AuthRequest } from '../types/express';
 
-// // Extension de l'interface Request pour inclure l'utilisateur
-// export interface AuthRequest extends Request {
-//   user?: User;
-// }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -22,6 +18,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     // Vérifier si le token est présent dans les headers
     if (req.headers.authorization?.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
+      
     }
 
     // Si pas de token, renvoyer une erreur

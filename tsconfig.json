@@ -14,7 +14,8 @@
     },
     "typeRoots": [
       "./node_modules/@types",
-      "./src/types"
+      "./src/types",
+      "./custom-types"
     ],
     "types": [
       "node",
@@ -23,7 +24,8 @@
   },
   "include": [
     "src/**/*",
-    "src/types/**/*.d.ts"
+    "src/types/**/*.d.ts",
+    "custom-types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

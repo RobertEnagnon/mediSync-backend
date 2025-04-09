@@ -25,20 +25,20 @@ class AppointmentController {
    */
   public static async getHistory(req: AuthRequest, res: Response) {
     try {
-      console.log("user in getHistory : ")
+      // console.log("user in getHistory : ")
       const practitionerId = req.user?._id;
       const now = new Date();
       
       const appointments = await Appointment.find({
         practitionerId,
-        // date: { $lte: now }
-        date: { $gte: now }
+        date: { $lte: now }
+        // date: { $gte: now }
       })
       // .sort({ startDate: -1 })
       .sort({ date: 'desc' })
       .populate('clientId', 'firstName lastName');
       
-      console.log(appointments)
+      // console.log(appointments)
       res.json(appointments);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
