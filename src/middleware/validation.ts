@@ -24,36 +24,87 @@ export const validateId = (req: Request, res: Response, next: NextFunction) => {
 /**
  * Middleware pour valider les données d'un rendez-vous
  */
-export const validateAppointmentData = (req: Request, res: Response, next: NextFunction) => {
-  const { startDate, endDate, clientId } = req.body;
+export const validateAppointmentData = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const {
+    title,
+    description,
+    date,
+    duration,
+    clientId,
+    practitionerId,
+    type,
+    notes,
+    location
+  } = req.body;
 
-  if (!startDate || !endDate || !clientId) {
+  // Validation des champs requis
+  if (!title || !date || !duration || !clientId || !practitionerId || !type) {
     return res.status(400).json({
-      message: 'Les champs startDate, endDate et clientId sont requis'
+      error: 'Les champs title, date, duration, clientId, practitionerId et type sont requis'
     });
   }
 
-  if (!isValidObjectId(clientId)) {
+  // Validation du type de rendez-vous
+  const validTypes = ['consultation', 'follow-up', 'emergency', 'other'];
+  if (!validTypes.includes(type)) {
     return res.status(400).json({
-      message: 'ID de client invalide'
+      error: 'Le type de rendez-vous doit être : consultation, follow-up, emergency ou other'
     });
   }
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+  // Validation de la date
+  const appointmentDate = new Date(date);
+  if (isNaN(appointmentDate.getTime())) {
     return res.status(400).json({
-      message: 'Dates invalides'
+      error: 'La date du rendez-vous est invalide'
     });
   }
 
-  if (start >= end) {
+  // Validation de la durée (doit être un nombre positif)
+  if (!Number.isInteger(duration) || duration <= 0) {
     return res.status(400).json({
-      message: 'La date de début doit être antérieure à la date de fin'
+      error: 'La durée doit être un nombre entier positif en minutes'
     });
   }
 
+  // Validation des IDs (format MongoDB ObjectId)
+  const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+  console.log(clientId, practitionerId);
+  if (!objectIdRegex.test(clientId)) {
+    return res.status(400).json({
+      error: 'L\'ID du client est invalide'
+    });
+  }
+  if (!objectIdRegex.test(practitionerId)) {
+    return res.status(400).json({
+      error: 'L\'ID du praticien est invalide'
+    });
+  }
+
+  // Validation des champs optionnels
+  if (description && typeof description !== 'string') {
+    return res.status(400).json({
+      error: 'La description doit être une chaîne de caractères'
+    });
+  }
+
+  if (notes && typeof notes !== 'string') {
+    return res.status(400).json({
+      error: 'Les notes doivent être une chaîne de caractères'
+    });
+  }
+
+  if (location && typeof location !== 'string') {
+    return res.status(400).json({
+      error: 'La localisation doit être une chaîne de caractères'
+    });
+  }
+
+  // Si toutes les validations sont passées
   next();
 };
 
