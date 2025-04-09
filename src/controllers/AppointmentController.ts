@@ -21,6 +21,32 @@ class AppointmentController {
   }
 
   /**
+   * Récupère l'historique des rendez-vous (rendez-vous passés)
+   */
+  public static async getHistory(req: AuthRequest, res: Response) {
+    try {
+      console.log("user in getHistory : ")
+      const practitionerId = req.user?._id;
+      const now = new Date();
+      
+      const appointments = await Appointment.find({
+        practitionerId,
+        // date: { $lte: now }
+        date: { $gte: now }
+      })
+      // .sort({ startDate: -1 })
+      .sort({ date: 'desc' })
+      .populate('clientId', 'firstName lastName');
+      
+      console.log(appointments)
+      res.json(appointments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+
+  /**
    * Récupère un rendez-vous par son ID
    */
   public static async getById(req: AuthRequest, res: Response) {
@@ -156,7 +182,7 @@ class AppointmentController {
         return res.status(400).json({ message: 'ID de rendez-vous invalide' });
       }
 
-      if (!['upcoming', 'ongoing', 'completed', 'cancelled'].includes(status)) {
+      if (!['pending', 'scheduled', 'confirmed', 'completed', 'cancelled'].includes(status)) {
         return res.status(400).json({ message: 'Statut invalide' });
       }
 
@@ -253,7 +279,7 @@ class AppointmentController {
 
       const appointments = await Appointment.find({
         practitionerId,
-        startDate: { $gte: startDate, $lte: endDate },
+        date: { $gte: startDate, $lte: endDate },
         status: { $nin: ['completed', 'cancelled'] }
       })
         .sort({ startDate: 1 })

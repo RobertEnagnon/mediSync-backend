@@ -9,6 +9,9 @@ router.use(protect);
 
 // Routes principales
 router.get('/', AppointmentController.getAll);
+router.get('/history', AppointmentController.getHistory);
+// Obtenir l'historique des rendez-vous
+// router.get('/history', AppointmentController.getAppointmentHistory);
 router.get('/upcoming', AppointmentController.getUpcoming);
 router.get('/search', AppointmentController.search);
 router.get('/filter', AppointmentController.filter);
