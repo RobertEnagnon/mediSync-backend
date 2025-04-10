@@ -62,15 +62,15 @@ class EventController {
    createRecurring = async(req: PrationnerUserRequest, res: Response, next: NextFunction) =>{
     try {
       const practitionerId = req.user?._id;
-      if (!practitionerId) {
+      if (!practitionerId) { 
         throw new ApiError(401, 'Unauthorized');
       }
       const { recurrencePattern, ...eventData } = req.body;
       if (!recurrencePattern) {
         throw new ApiError(400, 'Recurrence pattern is required');
       }
-      console.log("createRecurring event")
-      console.log(eventData);
+      // console.log("createRecurring event")
+      // console.log(eventData);
       const events = await this.service.createRecurringEvent(
         { ...eventData, practitionerId: practitionerId.toString() },
         recurrencePattern
@@ -146,13 +146,14 @@ class EventController {
   // Rechercher des événements
    search = async(req: PrationnerUserRequest, res: Response, next: NextFunction) => {
     try {
-      const { query, startDate, endDate, type, status } = req.query;
+      let { query, startDate, endDate, type, status } = req.query;
       const practitionerId = req.user?._id;
       if (!practitionerId) {
         throw new ApiError(401, 'Unauthorized');
       }
       if (!query) {
-        throw new ApiError(400, 'Search query is required');
+        // throw new ApiError(400, 'Search query is required');
+        query = "";
       }
       const filters = {
         ...(startDate && endDate ? {
