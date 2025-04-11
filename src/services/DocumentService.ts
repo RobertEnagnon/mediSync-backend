@@ -33,22 +33,24 @@ export class DocumentService extends BaseService<IDocument> {
   async uploadDocument(
     file: Express.Multer.File,
     metadata: {
+      title: string;
       clientId: string;
-      type: 'medical' | 'prescription' | 'report' | 'invoice' | 'other';
+      practitionerId: string;
+      type: 'prescription' | 'medical_report' | 'test_result' | 'other';
       description?: string;
+      tags?: string[];
     }
   ): Promise<IDocument> {
     const fileName = `${uuidv4()}${file.originalname}`;
     const filePath = join(this.uploadDir, fileName);
-
     // Créer le flux d'écriture
     await new Promise<void>((resolve, reject) => {
       const writeStream = createWriteStream(filePath);
       const readStream = createReadStream(file.path);
-
+      
+      readStream.pipe(writeStream);
       writeStream.on('finish', resolve);
       writeStream.on('error', reject);
-      readStream.pipe(writeStream);
     });
 
     // Supprimer le fichier temporaire
@@ -60,9 +62,12 @@ export class DocumentService extends BaseService<IDocument> {
 
     // Créer l'entrée dans la base de données
     return this.create({
+      title: metadata.title,
       clientId: new Types.ObjectId(metadata.clientId),
+      practitionerId: new Types.ObjectId(metadata.practitionerId),
       type: metadata.type,
       description: metadata.description,
+      tags: metadata.tags,
       fileName: fileName,
       originalName: file.originalname,
       mimeType: file.mimetype,

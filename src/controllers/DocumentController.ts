@@ -34,13 +34,27 @@ export class DocumentController {
         throw new ApiError(400, 'Aucun fichier n\'a été téléchargé');
       }
 
-      const document = await this.documentService.uploadDocument(req.file, req.body);
+      // Parse les données JSON du formulaire
+      let documentData;
+      try {
+        documentData = JSON.parse(req.body.data);
+      } catch (error) {
+        throw new ApiError(400, 'Les données du document sont invalides');
+      }
+
+      // Validation des champs requis
+      if (!documentData.title || !documentData.type || !documentData.clientId || !documentData.practitionerId) {
+        throw new ApiError(400, 'Champs obligatoires manquants');
+      }
+
+      const document = await this.documentService.uploadDocument(req.file, documentData);
       res.status(201).json(document);
     } catch (error) {
       if (error instanceof ApiError) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Erreur lors du téléchargement du document' });
+        console.error('Erreur lors du téléchargement:', error);
+        res.status(500).json({ error: 'Erreur lors du téléchargement du document: ' + error });
       }
     }
   };
