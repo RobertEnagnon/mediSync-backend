@@ -17,6 +17,7 @@ import invoicesRoutes from './routes/invoicesRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import eventRoutes from './routes/eventRoutes';
 import dashboardRoutes from "./routes/dashboardRoutes";
+import statisticRoutes from "./routes/statisticsRoutes";
 
 // WebSocket
 import initializeWebSocket from './config/websocket.config';
@@ -56,6 +57,7 @@ app.use('/api/documents', protect, documentsRoutes);
 app.use('/api/invoices', protect, invoicesRoutes);
 app.use('/api/notifications', protect, notificationRoutes);
 app.use('/api/events', protect, eventRoutes);
+app.use('/api/statistics', protect, statisticRoutes);
 
 // Middleware de gestion des erreurs
 app.use(errorHandler);

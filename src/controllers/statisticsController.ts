@@ -1,16 +1,17 @@
 import { Request, Response } from 'express';
 import statisticsService from '../services/StatisticsService';
 import { catchAsync } from '../utils/catchAsync';
+import { AuthRequest } from '../types/express';
 
 class StatisticsController {
-  getDashboardStatistics = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+  getDashboardStatistics = catchAsync(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?._id;
     const stats = await statisticsService.getDashboardStatistics(userId);
     res.json(stats);
   });
 
-  getAppointmentStatistics = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+  getAppointmentStatistics = catchAsync(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?._id;
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
@@ -29,8 +30,8 @@ class StatisticsController {
     res.json(stats);
   });
 
-  getClientStatistics = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+  getClientStatistics = catchAsync(async (req: AuthRequest, res: Response) => {
+    const userId = req.user?._id;
     const { period } = req.query;
 
     if (!period || !['day', 'week', 'month', 'year'].includes(period as string)) {
