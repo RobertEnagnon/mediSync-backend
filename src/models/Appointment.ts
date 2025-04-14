@@ -13,7 +13,7 @@ export interface IAppointment extends Document {
   notes?: string;
   status: AppointmentStatus;
   createdAt: Date;
-  updatedAt: Date;
+  updatedAt: Date; 
   cancelledAt?: Date;
   cancellationReason?: string;
   confirmedAt?: Date;

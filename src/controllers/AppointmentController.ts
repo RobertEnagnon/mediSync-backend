@@ -101,6 +101,8 @@ class AppointmentController {
    */
   public static async create(req: AuthRequest, res: Response) {
     try {
+      console.log("ajout du rendez-vous")
+      console.log(req.body)
       const practitionerId = req.user?._id;
       const appointmentData = {
         ...req.body,

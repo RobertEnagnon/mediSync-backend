@@ -40,6 +40,8 @@ export const validateAppointmentData = (
     notes,
     location
   } = req.body;
+  console.log("ValidateAppointmentDate")
+  console.log(req.body);
 
   // Validation des champs requis
   if (!title || !date || !duration || !clientId || !practitionerId || !type) {
