@@ -1,29 +1,48 @@
-import WebSocket from 'ws';
-import { Server } from 'http';
+import { Server as HttpServer } from 'http';
+import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
 export class WebSocketService {
   private static instance: WebSocketService;
-  private wss: WebSocket.Server;
-  private clients: Map<string, WebSocket>;
+  private io: Server;
+  private clients: Map<string, Socket>;
 
-  constructor(server: Server) {
-    this.wss = new WebSocket.Server({ server });
+  constructor(server: HttpServer) {
+    this.io = new Server(server, {
+      cors: {
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        methods: ['GET', 'POST'],
+        credentials: true
+      }
+    });
     this.clients = new Map();
+    
+    this.io.on('connection', (socket) => {
+      console.log('Client connected');
+      
+      socket.on('authenticate', (token: string) => {
+        this.authenticateClient(socket, token);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Client disconnected');
+        this.removeClientBySocket(socket);
+      });
+    });
   }
 
-  public static getInstance(server?: Server): WebSocketService {
+  public static getInstance(server?: HttpServer): WebSocketService {
     if (!WebSocketService.instance && server) {
       WebSocketService.instance = new WebSocketService(server);
     }
     return WebSocketService.instance;
   }
 
-  public onConnection(callback: (socket: WebSocket) => void): void {
-    this.wss.on('connection', callback);
+  public onConnection(callback: (socket: Socket) => void): void {
+    this.io.on('connection', callback);
   }
 
-  public authenticateClient(socket: WebSocket, token: string): void {
+  private authenticateClient(socket: Socket, token: string): void {
     try {
       const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
       const userId = decoded.id;
@@ -31,24 +50,22 @@ export class WebSocketService {
       // Stocker le socket avec l'ID de l'utilisateur
       this.clients.set(userId, socket);
 
-      // Écouter la déconnexion
-      socket.on('close', () => {
-        this.removeClient(userId);
-      });
-
       // Envoyer une confirmation d'authentification
-      socket.send(JSON.stringify({ 
-        type: 'auth_success',
-        data: { userId }
-      }));
+      socket.emit('auth_success', { userId });
 
     } catch (error) {
-      console.error('WebSocket authentication error:', error);
-      socket.send(JSON.stringify({ 
-        type: 'auth_error',
-        data: { message: 'Authentication failed' }
-      }));
-      socket.close();
+      console.error('Socket.IO authentication error:', error);
+      socket.emit('auth_error', { message: 'Authentication failed' });
+      socket.disconnect();
+    }
+  }
+
+  private removeClientBySocket(socket: Socket): void {
+    for (const [userId, clientSocket] of this.clients.entries()) {
+      if (clientSocket === socket) {
+        this.clients.delete(userId);
+        break;
+      }
     }
   }
 
@@ -56,7 +73,7 @@ export class WebSocketService {
     if (this.clients.has(userId)) {
       const socket = this.clients.get(userId);
       if (socket) {
-        socket.close();
+        socket.disconnect();
       }
       this.clients.delete(userId);
     }
@@ -64,23 +81,19 @@ export class WebSocketService {
 
   public sendToUser(userId: string, type: string, data: any): void {
     const socket = this.clients.get(userId);
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type, data }));
+    if (socket && socket.connected) {
+      socket.emit(type, data);
     }
   }
 
   public broadcastToAll(type: string, data: any): void {
-    const message = JSON.stringify({ type, data });
-    this.clients.forEach(socket => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(message);
-      }
-    });
+    this.io.emit(type, data);
   }
 
   public closeAllConnections(): void {
-    this.clients.forEach(socket => socket.close());
+    this.clients.forEach(socket => socket.disconnect());
     this.clients.clear();
+    this.io.close();
   }
 }
 

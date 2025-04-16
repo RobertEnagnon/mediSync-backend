@@ -3,6 +3,7 @@ import Appointment from '../models/Appointment';
 import { AuthRequest } from '../types/express';
 import { isValidObjectId } from 'mongoose';
 import { startOfDay, endOfDay, addDays } from 'date-fns';
+import notificationService from '../services/NotificationService';
 
 class AppointmentController {
   /**
@@ -113,6 +114,10 @@ class AppointmentController {
       await appointment.save();
 
       const populatedAppointment = await appointment.populate('clientId', 'firstName lastName');
+
+      // Envoyer une notification de création de rendez-vous
+      await notificationService.createAppointmentReminder(populatedAppointment);
+
       res.status(201).json(populatedAppointment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -131,11 +136,21 @@ class AppointmentController {
         return res.status(400).json({ message: 'ID de rendez-vous invalide' });
       }
 
+      const oldAppointment = await Appointment.findOne({ _id: id, practitionerId });
+      if (!oldAppointment) {
+        return res.status(404).json({ message: 'Rendez-vous non trouvé' });
+      }
+
       const appointment = await Appointment.findOneAndUpdate(
         { _id: id, practitionerId },
         req.body,
         { new: true }
       ).populate('clientId', 'firstName lastName');
+
+      // Si la date a changé, envoyer une notification de modification
+      if (oldAppointment.date.getTime() !== new Date(req.body.date).getTime()) {
+        await notificationService.createAppointmentModification(appointment, oldAppointment.date);
+      }
 
       if (!appointment) {
         return res.status(404).json({ message: 'Rendez-vous non trouvé' });
@@ -159,11 +174,16 @@ class AppointmentController {
         return res.status(400).json({ message: 'ID de rendez-vous invalide' });
       }
 
-      const appointment = await Appointment.findOneAndDelete({ _id: id, practitionerId });
+      const appointment = await Appointment.findOne({ _id: id, practitionerId }).populate('clientId', 'firstName lastName');
 
       if (!appointment) {
         return res.status(404).json({ message: 'Rendez-vous non trouvé' });
       }
+
+      // Envoyer une notification d'annulation avant de supprimer
+      await notificationService.createAppointmentCancellation(appointment, req.body.reason);
+
+      await Appointment.findByIdAndDelete(id);
 
       res.json({ message: 'Rendez-vous supprimé avec succès' });
     } catch (error: any) {
@@ -196,6 +216,11 @@ class AppointmentController {
 
       if (!appointment) {
         return res.status(404).json({ message: 'Rendez-vous non trouvé' });
+      }
+
+      // Si le statut est 'cancelled', envoyer une notification d'annulation
+      if (status === 'cancelled') {
+        await notificationService.createAppointmentCancellation(appointment, req.body.reason);
       }
 
       res.json(appointment);

@@ -18,6 +18,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import eventRoutes from './routes/eventRoutes';
 import dashboardRoutes from "./routes/dashboardRoutes";
 import statisticRoutes from "./routes/statisticsRoutes";
+import metricsRoutes from "./routes/metricsRoutes";
 
 // WebSocket
 import initializeWebSocket from './config/websocket.config';
@@ -58,6 +59,7 @@ app.use('/api/invoices', protect, invoicesRoutes);
 app.use('/api/notifications', protect, notificationRoutes);
 app.use('/api/events', protect, eventRoutes);
 app.use('/api/statistics', protect, statisticRoutes);
+app.use('/api/metrics', protect, metricsRoutes);
 
 // Middleware de gestion des erreurs
 app.use(errorHandler);
@@ -75,6 +77,9 @@ mongoose.connect(MONGODB_URI)
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
       console.log(`Serveur démarré sur le port ${PORT}`);
+      console.log('Initialisation des tâches planifiées...');
+      // Le service est déjà initialisé grâce au singleton
+      // Les tâches planifiées démarreront automatiquement
     });
   })
   .catch((error) => {

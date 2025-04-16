@@ -13,7 +13,7 @@ export class NotificationService extends BaseService<INotification> {
   }
 
   // Créer et envoyer une notification
-  async createAndSend(notification: Partial<INotification>): Promise<INotification> {
+  async createAndSend(notification: Omit<Partial<INotification>, 'type'> & { type: INotification['type'] }): Promise<INotification> {
     const newNotification = await this.create({
       ...notification,
       createdAt: new Date(),
@@ -21,7 +21,9 @@ export class NotificationService extends BaseService<INotification> {
     });
     
     // Envoyer la notification en temps réel via WebSocket
-    this.wsService.sendToUser(notification.userId, 'notification', newNotification);
+    if (notification.userId) {
+      this.wsService.sendToUser(notification.userId.toString(), 'notification', newNotification);
+    }
     
     return newNotification;
   }
@@ -71,7 +73,7 @@ export class NotificationService extends BaseService<INotification> {
 
     const notification = {
       userId: appointment.clientId._id,
-      type: 'APPOINTMENT_REMINDER',
+      type: 'APPOINTMENT_REMINDER' as const,
       title: 'Rappel de rendez-vous',
       message: `Vous avez un rendez-vous ${appointment.type} prévu le ${formattedDate}`,
       data: { 
@@ -107,7 +109,7 @@ export class NotificationService extends BaseService<INotification> {
 
     const notification = {
       userId: appointment.clientId._id,
-      type: 'APPOINTMENT_CANCELLATION',
+      type: 'APPOINTMENT_CANCELLATION' as const,
       title: 'Annulation de rendez-vous',
       message: `Votre rendez-vous ${appointment.type} du ${formattedDate} a été annulé${reason ? ` : ${reason}` : ''}`,
       data: { 
@@ -137,7 +139,7 @@ export class NotificationService extends BaseService<INotification> {
 
     const notification = {
       userId: appointment.clientId._id,
-      type: 'APPOINTMENT_MODIFICATION',
+      type: 'APPOINTMENT_MODIFICATION' as const,
       title: 'Modification de rendez-vous',
       message: `Votre rendez-vous ${appointment.type} a été déplacé du ${oldFormattedDate} au ${newFormattedDate}`,
       data: { 
@@ -155,7 +157,7 @@ export class NotificationService extends BaseService<INotification> {
   async createDocumentNotification(document: any): Promise<INotification> {
     const notification = {
       userId: document.clientId,
-      type: 'NEW_DOCUMENT',
+      type: 'NEW_DOCUMENT' as const,
       title: 'Nouveau document disponible',
       message: `Un nouveau document "${document.originalName}" a été ajouté à votre dossier`,
       data: { 
@@ -171,8 +173,8 @@ export class NotificationService extends BaseService<INotification> {
   // Créer une notification de nouvelle facture
   async createInvoiceNotification(invoice: any): Promise<INotification> {
     const notification = {
-      userId: invoice.clientId,
-      type: 'NEW_INVOICE',
+      userId: typeof invoice.clientId === 'string' ? invoice.clientId : invoice.clientId._id,
+      type: 'NEW_INVOICE' as const,
       title: 'Nouvelle facture',
       message: `Une nouvelle facture (${invoice.invoiceNumber}) d'un montant de ${invoice.total}€ a été générée`,
       data: { 

@@ -24,8 +24,8 @@ interface SocketData {
 export const initializeWebSocket = (server: HttpServer): Server<ClientToServerEvents, ServerToClientEvents, {}, SocketData> => {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, {}, SocketData>(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-      methods: ['GET', 'POST'],
+      origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+      methods: ['GET', 'POST', "PUT", "DELETE", "PATCH"],
       credentials: true
     }
   });

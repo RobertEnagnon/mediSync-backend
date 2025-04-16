@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { DocumentService } from '../services/DocumentService';
 import { ApiError } from '../middleware/errorHandler';
+import notificationService from '../services/NotificationService';
 
 // Définition du type pour la requête avec fichier
 export interface RequestWithFile extends Request {
@@ -48,6 +49,10 @@ export class DocumentController {
       }
 
       const document = await this.documentService.uploadDocument(req.file, documentData);
+
+      // Envoyer une notification de nouveau document
+      await notificationService.createDocumentNotification(document);
+
       res.status(201).json(document);
     } catch (error) {
       if (error instanceof ApiError) {
