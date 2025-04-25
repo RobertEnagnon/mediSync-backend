@@ -8,13 +8,13 @@ export interface INotification extends Document {
   title: string;
   message: string;
   data?: {
-    appointmentId?: string; 
+    appointmentId?:  Schema.Types.ObjectId | String; 
     date?: Date;
     oldDate?: Date;
     newDate?: Date;
     type?: string;
     reason?: string;
-    documentId?: string;
+    documentId?: Schema.Types.ObjectId | String;
     fileName?: string;
     invoiceId?: string;
     number?: string;

@@ -18,10 +18,12 @@ export class ClientController {
 
       const practitionerId = new Types.ObjectId(req.user._id);
       const clients = await Client.find({ practitionerId }).sort({ lastName: 1, firstName: 1 });
-     return res.json(clients);
-    } catch (error) {
+      return res.json(clients);
+    } catch (error: any) {
       console.error('Erreur lors de la récupération des clients:', error);
-      return  res.status(500).json({ message: 'Erreur lors de la récupération des clients' });
+      return res.status(500).json({ 
+        message: `Erreur lors de la récupération des clients: ${error?.message || 'Erreur inconnue'}` 
+      });
     }
   }
 
@@ -61,15 +63,24 @@ export class ClientController {
       }
 
       const practitionerId = new Types.ObjectId(req.user._id);
-      // console.log("create: ", practitionerId);
       const clientData = { ...req.body, practitionerId };
-      // const client = new Client(clientData);
-      // await client.save();
-      const client = clientService.create(clientData)
+      
+      const client = await clientService.create(clientData);
       return res.status(201).json(client);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création du client:', error);
-      return res.status(500).json({ message: 'Erreur lors de la création du client' });
+      
+      // Si c'est une erreur API (comme email déjà existant)
+      if (error.statusCode) {
+        return res.status(error.statusCode).json({ 
+          message: error.message || 'Une erreur est survenue'
+        });
+      }
+      
+      // Pour les autres erreurs
+      return res.status(500).json({ 
+        message: 'Une erreur est survenue lors de la création du client'
+      });
     }
   }
 
