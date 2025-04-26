@@ -21,6 +21,8 @@ export interface INotification extends Document {
     number?: string;
     amount?: number;
     clientId?: Schema.Types.ObjectId | String;
+    paymentMethod?: string;
+    changes?: string[];
   };
   read: boolean;
   createdAt: Date;

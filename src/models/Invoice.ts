@@ -13,7 +13,10 @@ export interface IInvoice extends Document {
   }>;
   total: number;
   status: 'pending' | 'paid' | 'cancelled';
+  paymentMethod?: string;
   paidAt?: Date;
+  cancellationReason?: string;
+  cancelledAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +36,10 @@ const invoiceSchema = new Schema<IInvoice>({
     enum: ['pending', 'paid', 'cancelled'],
     default: 'pending'
   },
+  paymentMethod: { type: String },
   paidAt: { type: Date },
+  cancellationReason: { type: String },
+  cancelledAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, {

@@ -134,8 +134,9 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Pied de page
       doc.moveDown(2);
+      doc.x = 50;
       doc.fontSize(10);
-      doc.text('Merci de votre confiance', { align: 'center' });
+      doc.text('Merci de votre confiance',  { align: 'center' });
       doc.text('Pour toute question, n\'hésitez pas à nous contacter', { align: 'center' });
 
       doc.end();
@@ -145,12 +146,25 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Mettre à jour le statut d'une facture
    */
-  async updateStatus(invoiceId: string, status: 'pending' | 'paid' | 'cancelled'): Promise<IInvoice> {
+  async updateStatus(invoiceId: string, status: 'pending' | 'paid' | 'cancelled', options?: { paymentMethod?: string, cancellationReason?: string }): Promise<IInvoice> {
+    const updateData: any = { status };
+    
+    // Ajouter des données selon le type de mise à jour
+    if (status === 'paid') {
+      updateData.paidAt = new Date();
+      if (options?.paymentMethod) {
+        updateData.paymentMethod = options.paymentMethod;
+      }
+    } else if (status === 'cancelled') {
+      updateData.cancelledAt = new Date();
+      if (options?.cancellationReason) {
+        updateData.cancellationReason = options.cancellationReason;
+      }
+    }
+
     const invoice = await this.model.findByIdAndUpdate(
       invoiceId,
-      { status, 
-        paidAt: status === 'paid' ? new Date() : undefined 
-      },
+      updateData,
       { new: true }
     );
 

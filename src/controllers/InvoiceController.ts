@@ -86,4 +86,66 @@ export class InvoiceController {
       res.status(500).json({ error: 'Failed to update invoice status' });
     }
   };
+  
+  // Marquer une facture comme payée
+  public markAsPaid = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { paymentMethod } = req.body;
+      
+      // Mettre à jour le statut avec la méthode de paiement
+      const invoice = await this.invoiceService.updateStatus(id, 'paid', { paymentMethod });
+      
+      // Envoyer une notification
+      await notificationService.createAndSend({
+        userId: typeof invoice.clientId === 'string' ? invoice.clientId : invoice.clientId._id,
+        type: 'INVOICE_PAID',
+        title: 'Facture payée',
+        message: `La facture ${invoice.invoiceNumber} a été payée via ${paymentMethod || 'un moyen de paiement'}`,
+        data: {
+          invoiceId: invoice._id,
+          number: invoice.invoiceNumber,
+          amount: invoice.total,
+          paymentMethod
+        },
+        severity: 'success'
+      });
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error('Erreur lors du paiement de la facture:', error);
+      res.status(500).json({ error: 'Failed to mark invoice as paid' });
+    }
+  };
+  
+  // Annuler une facture
+  public cancelInvoice = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      // Mettre à jour le statut avec la raison d'annulation
+      const invoice = await this.invoiceService.updateStatus(id, 'cancelled', { cancellationReason: reason });
+      
+      // Envoyer une notification
+      await notificationService.createAndSend({
+        userId: typeof invoice.clientId === 'string' ? invoice.clientId : invoice.clientId._id,
+        type: 'INVOICE_OVERDUE',
+        title: 'Facture annulée',
+        message: `La facture ${invoice.invoiceNumber} a été annulée${reason ? ` pour la raison suivante: ${reason}` : ''}`,
+        data: {
+          invoiceId: invoice._id,
+          number: invoice.invoiceNumber,
+          amount: invoice.total,
+          reason
+        },
+        severity: 'warning'
+      });
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation de la facture:', error);
+      res.status(500).json({ error: 'Failed to cancel invoice' });
+    }
+  };
 }
