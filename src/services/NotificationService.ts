@@ -29,7 +29,7 @@ export class NotificationService extends BaseService<INotification> {
           message: notification.message,
           data: notification.data,
           _id: newNotification._id
-        });
+        }); 
         
         // Vérifier si la socket room existe
         const rooms = await io.in(userId).fetchSockets();
