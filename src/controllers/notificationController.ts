@@ -13,7 +13,7 @@ class NotificationController {
 
         const notifications = await Notification.find({ 
             userId,
-            isRead: false 
+            read: false 
         }).sort({ createdAt: -1 });
         console.log("getNotifications: ")
         console.log(notifications);
@@ -50,23 +50,31 @@ class NotificationController {
 
     async markNotificationAsRead(req: AuthRequest, res: Response) {
         const userId = req.user?._id;
-        if (!userId) {
-            throw new ApiError(401, 'Utilisateur non authentifié');
+        try {
+            if (!userId) {
+                throw new ApiError(401, 'Utilisateur non authentifié');
+            }
+    
+            console.log("markNotificationAsRead params")
+            console.log(req.params)
+            const { id: notificationId } = req.params;
+            console.log(notificationId)
+    
+            const notification = await Notification.findOneAndUpdate(
+                { _id: notificationId, userId },
+                { read: true },
+                { new: true }
+            );
+    
+            if (!notification) {
+                throw new ApiError(404, 'Notification non trouvée');
+            }
+    
+            res.json(notification);
+        } catch (error) {
+            console.log(error)
+            res.status(404).json({message: error, success: false});
         }
-
-        const { notificationId } = req.params;
-
-        const notification = await Notification.findOneAndUpdate(
-            { _id: notificationId, userId },
-            { isRead: true },
-            { new: true }
-        );
-
-        if (!notification) {
-            throw new ApiError(404, 'Notification non trouvée');
-        }
-
-        res.json(notification);
     }
 
     async markAllNotificationsAsRead(req: AuthRequest, res: Response) {
@@ -76,8 +84,8 @@ class NotificationController {
         }
 
         await Notification.updateMany(
-            { userId, isRead: false },
-            { isRead: true }
+            { userId, read: false },
+            { read: true }
         );
 
         res.json({ message: 'Toutes les notifications ont été marquées comme lues' });
@@ -89,10 +97,10 @@ class NotificationController {
             throw new ApiError(401, 'Utilisateur non authentifié');
         }
 
-        const { notificationId } = req.params;
+        const { id } = req.params;
 
         const notification = await Notification.findOneAndDelete({
-            _id: notificationId,
+            _id: id,
             userId
         });
 
@@ -111,7 +119,7 @@ class NotificationController {
 
         const result = await Notification.deleteMany({
             userId,
-            isRead: true
+            read: true
         });
 
         res.json({ 

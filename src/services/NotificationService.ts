@@ -22,13 +22,24 @@ export class NotificationService extends BaseService<INotification> {
     if (notification.userId) {
       try {
         const userId = notification.userId.toString();
-        console.log(`Envoi de notification WebSocket à l'utilisateur ${userId}`, {
+        console.log(`💬 Préparation d'envoi WebSocket à l'utilisateur ${userId}`);
+        console.log('📣 Détails notification à envoyer:', {
           type: notification.type,
-          title: notification.title
+          title: notification.title,
+          message: notification.message,
+          data: notification.data,
+          _id: newNotification._id
         });
         
+        // Vérifier si la socket room existe
+        const rooms = await io.in(userId).fetchSockets();
+        console.log(`🔎 Nombre de sockets dans la room ${userId}: ${rooms.length}`);
+        
         // Utiliser l'instance exportée de Socket.IO pour émettre à l'utilisateur dans sa room spécifique
+        console.log(`📢 Émission de l'événement 'notification' à la room ${userId}`);
         io.to(userId).emit('notification', newNotification);
+        console.log('✅ Notification émise');
+        
       } catch (error) {
         console.error('Erreur lors de l\'envoi de la notification via WebSocket:', error);
       }
