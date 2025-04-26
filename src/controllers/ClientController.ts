@@ -4,6 +4,7 @@ import Client from '../models/Client';
 import Appointment from '../models/Appointment';
 import { AuthRequest } from '../types/express';
 import clientService from '../services/ClientService';
+import notificationService from '../services/NotificationService';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
 export class ClientController {
@@ -65,7 +66,17 @@ export class ClientController {
       const practitionerId = new Types.ObjectId(req.user._id);
       const clientData = { ...req.body, practitionerId };
       
+      // Créer le client
       const client = await clientService.create(clientData);
+      
+      // Créer et envoyer une notification
+      try {
+        await notificationService.createClientNotification(client, req.user._id.toString());
+      } catch (notifError) {
+        console.error('Erreur lors de la création de la notification:', notifError);
+        // On ne bloque pas la réponse en cas d'erreur de notification
+      }
+      
       return res.status(201).json(client);
     } catch (error: any) {
       console.error('Erreur lors de la création du client:', error);

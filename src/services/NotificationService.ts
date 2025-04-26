@@ -1,19 +1,17 @@
 import { BaseService } from './BaseService';
 import Notification, { INotification } from '../models/Notification';
-import { WebSocketService } from './WebSocketService';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { io } from '../server';
 
 export class NotificationService extends BaseService<INotification> {
-  private wsService: WebSocketService;
-
   constructor() {
     super(Notification);
-    this.wsService = WebSocketService.getInstance();
   }
 
   // Créer et envoyer une notification
   async createAndSend(notification: Omit<Partial<INotification>, 'type'> & { type: INotification['type'] }): Promise<INotification> {
+    // Créer la notification en base de données
     const newNotification = await this.create({
       ...notification,
       createdAt: new Date(),
@@ -22,7 +20,18 @@ export class NotificationService extends BaseService<INotification> {
     
     // Envoyer la notification en temps réel via WebSocket
     if (notification.userId) {
-      this.wsService.sendToUser(notification.userId.toString(), 'notification', newNotification);
+      try {
+        const userId = notification.userId.toString();
+        console.log(`Envoi de notification WebSocket à l'utilisateur ${userId}`, {
+          type: notification.type,
+          title: notification.title
+        });
+        
+        // Utiliser l'instance exportée de Socket.IO pour émettre à l'utilisateur dans sa room spécifique
+        io.to(userId).emit('notification', newNotification);
+      } catch (error) {
+        console.error('Erreur lors de l\'envoi de la notification via WebSocket:', error);
+      }
     }
     
     return newNotification;
@@ -182,6 +191,22 @@ export class NotificationService extends BaseService<INotification> {
         number: invoice.invoiceNumber,
         amount: invoice.total
       }
+    };
+
+    return this.createAndSend(notification);
+  }
+
+  // Créer une notification pour la création d'un client
+  async createClientNotification(client: any, practitionerId: string): Promise<INotification> {
+    const notification = {
+      userId: practitionerId,
+      type: 'CLIENT_CREATED' as const,
+      title: 'Nouveau client',
+      message: `Un nouveau client ${client.firstName} ${client.lastName} a été ajouté`,
+      data: { 
+        clientId: client._id
+      },
+      severity: 'success' as const
     };
 
     return this.createAndSend(notification);

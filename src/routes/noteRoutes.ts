@@ -7,4 +7,4 @@ const router = Router();
 router.get('/:clientId', NoteController.getNotesByClientId); // Récupérer les notes par ID de client
 router.post('/', NoteController.createNote); // Créer une nouvelle note
 
-export default router;
+export default router; 

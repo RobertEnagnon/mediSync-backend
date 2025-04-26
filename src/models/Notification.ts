@@ -4,7 +4,8 @@ export interface INotification extends Document {
   userId:  Schema.Types.ObjectId | String;
   type: 'APPOINTMENT_REMINDER' | 'APPOINTMENT_CANCELLATION' | 'APPOINTMENT_MODIFICATION' |
         'NEW_DOCUMENT' | 'NEW_INVOICE' | 'INVOICE_PAID' | 'INVOICE_OVERDUE' |
-        'BIRTHDAY_REMINDER' | 'INACTIVITY_ALERT' | 'SYSTEM_NOTIFICATION';
+        'BIRTHDAY_REMINDER' | 'INACTIVITY_ALERT' | 'SYSTEM_NOTIFICATION' | 'CLIENT_CREATED' |
+        'CLIENT_UPDATED' | 'CLIENT_DELETED';
   title: string;
   message: string;
   data?: {
@@ -19,6 +20,7 @@ export interface INotification extends Document {
     invoiceId?: string;
     number?: string;
     amount?: number;
+    clientId?: Schema.Types.ObjectId | String;
   };
   read: boolean;
   createdAt: Date;
@@ -41,23 +43,17 @@ const notificationSchema = new Schema<INotification>({
       'INVOICE_OVERDUE',
       'BIRTHDAY_REMINDER',
       'INACTIVITY_ALERT',
-      'SYSTEM_NOTIFICATION'
+      'SYSTEM_NOTIFICATION',
+      'CLIENT_CREATED',
+      'CLIENT_UPDATED',
+      'CLIENT_DELETED'
     ]
   },
   title: { type: String, required: true },
   message: { type: String, required: true },
-  data: {
-    appointmentId: { type: Schema.Types.ObjectId, ref: 'Appointment' },
-    date: Date,
-    oldDate: Date,
-    newDate: Date,
-    type: String,
-    reason: String,
-    documentId: { type: Schema.Types.ObjectId, ref: 'Document' },
-    fileName: String,
-    invoiceId: { type: Schema.Types.ObjectId, ref: 'Invoice' },
-    number: String,
-    amount: Number
+  data: { 
+    type: Schema.Types.Mixed,
+    default: {} 
   },
   read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },

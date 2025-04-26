@@ -8,7 +8,8 @@ const router = express.Router();
 router.use(protect);
 
 // Routes pour les notifications
-router.get('/', notificationController.getNotifications);
+// router.get('/', notificationController.getNotifications);
+router.get('/', notificationController.getAllNotifications);
 router.put('/:id/read', notificationController.markNotificationAsRead);
 router.delete('/:id', notificationController.deleteNotification);
 router.put('/read-all', notificationController.markAllNotificationsAsRead);

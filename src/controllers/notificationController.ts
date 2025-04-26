@@ -9,11 +9,14 @@ class NotificationController {
         if (!userId) {
             throw new ApiError(401, 'Utilisateur non authentifié');
         }
+        console.log("userId: ", userId)
 
         const notifications = await Notification.find({ 
             userId,
             isRead: false 
         }).sort({ createdAt: -1 });
+        console.log("getNotifications: ")
+        console.log(notifications);
 
         res.json(notifications);
     }
@@ -30,8 +33,10 @@ class NotificationController {
 
         const notifications = await Notification.find({ userId })
             .sort({ createdAt: -1 })
-            .skip(skip)
+            .skip(skip)  
             .limit(limit);
+            console.log('getAllNotifications');
+            console.log(notifications);
 
         const total = await Notification.countDocuments({ userId });
 
